@@ -45,6 +45,20 @@
       "expo-router",
       "expo-font",
       [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.9.25",
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 34,
+            "minSdkVersion": 24
+          },
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
+        }
+      ],
+      [
         "expo-media-library",
         {
           "photosPermission": "Permet de sauvegarder les fichiers.",
