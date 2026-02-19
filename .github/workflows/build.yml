@@ -53,33 +53,3 @@ jobs:
           name: emsi-file.apk
           path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 90
-
-  # ─── Build EAS (Android + iOS) — requires EXPO_TOKEN secret ────────────────
-  build-eas:
-    name: Build EAS (Android + iOS)
-    runs-on: ubuntu-latest
-    if: ${{ secrets.EXPO_TOKEN != '' }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Setup Expo & EAS CLI
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Build Android APK (EAS)
-        run: eas build --platform android --profile preview --non-interactive --no-wait
-
-      - name: Build iOS IPA (EAS)
-        run: eas build --platform ios --profile production --non-interactive --no-wait
