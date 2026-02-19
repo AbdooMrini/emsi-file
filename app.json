@@ -58,9 +58,6 @@
     "extra": {
       "router": {
         "origin": false
-      },
-      "eas": {
-        "projectId": "emsi-file"
       }
     }
   }

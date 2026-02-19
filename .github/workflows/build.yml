@@ -7,11 +7,8 @@ on:
     branches: [main]
   workflow_dispatch:
 
-env:
-  EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-
 jobs:
-  # ─── Build Android APK ──────────────────────────────────────────────────────
+  # ─── Build Android APK (Local — no EAS account needed) ─────────────────────
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
@@ -25,59 +22,7 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Setup Expo & EAS CLI
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Build Android APK
-        run: eas build --platform android --profile preview --non-interactive --no-wait
-
-  # ─── Build iOS IPA ──────────────────────────────────────────────────────────
-  build-ios:
-    name: Build iOS IPA
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Setup Expo & EAS CLI
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Build iOS IPA
-        run: eas build --platform ios --profile production --non-interactive --no-wait
-
-  # ─── Local APK Build (without EAS) ─────────────────────────────────────────
-  build-android-local:
-    name: Build Android APK (Local)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Setup Java
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -86,22 +31,55 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Setup Expo
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Prebuild Android
+      - name: Expo prebuild (generate android project)
         run: npx expo prebuild --platform android --clean
 
-      - name: Build APK with Gradle
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Build Release APK
         working-directory: android
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease --no-daemon
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: emsi-file.apk
           path: android/app/build/outputs/apk/release/app-release.apk
-          retention-days: 30
+          retention-days: 90
+
+  # ─── Build EAS (Android + iOS) — requires EXPO_TOKEN secret ────────────────
+  build-eas:
+    name: Build EAS (Android + iOS)
+    runs-on: ubuntu-latest
+    if: ${{ secrets.EXPO_TOKEN != '' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Expo & EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build Android APK (EAS)
+        run: eas build --platform android --profile preview --non-interactive --no-wait
+
+      - name: Build iOS IPA (EAS)
+        run: eas build --platform ios --profile production --non-interactive --no-wait
